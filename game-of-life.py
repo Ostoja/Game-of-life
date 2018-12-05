@@ -5,15 +5,17 @@ import numpy as np
 import matplotlib.pyplot as plt  
 import matplotlib.animation as animation 
   
+from multiprocessing import Value, Array, Process, Pool
+
 # setting up the values for the grid 
 ON = 255
 OFF = 0
-vals = [ON, OFF] 
-  
+vals = [ON, OFF]
+
 def randomGrid(N): 
   
     """returns a grid of NxN random values"""
-    return np.random.choice(vals, N*N, p=[0.2, 0.8]).reshape(N, N) 
+    return np.random.choice(vals, N*N, p=[0.2, 0.8]).reshape(N, N)
   
 def addGlider(i, j, grid): 
   
@@ -53,14 +55,10 @@ def addGosperGliderGun(i, j, grid):
   
     grid[i:i+11, j:j+38] = gun 
   
-def update(frameNum, img, grid, N): 
-  
-    # copy grid since we require 8 neighbors  
-    # for calculation and we go line by line  
-    newGrid = grid.copy() 
-    for i in range(N): 
-        for j in range(N): 
-  
+def compute(i, N, grid, newGrid):
+    #i, N, grid= tupl
+    #for i in range(I)
+    for j in range(N): 
             # compute 8-neghbor sum 
             # using toroidal boundary conditions - x and y wrap around  
             # so that the simulaton takes place on a toroidal surface. 
@@ -68,24 +66,52 @@ def update(frameNum, img, grid, N):
                          grid[(i-1)%N, j] + grid[(i+1)%N, j] + 
                          grid[(i-1)%N, (j-1)%N] + grid[(i-1)%N, (j+1)%N] + 
                          grid[(i+1)%N, (j-1)%N] + grid[(i+1)%N, (j+1)%N])/255) 
-  
             # apply Conway's rules 
+            
             if grid[i, j]  == ON: 
-                if (total < 2) or (total > 3): 
-                    newGrid[i, j] = OFF 
+                if (total < 2) or (total > 3):
+                    newGrid[i*N+j] = OFF 
+                else:
+                    newGrid[i*N+j] = grid[i, j]
             else: 
-                if total == 3: 
-                    newGrid[i, j] = ON 
+                if total == 3:
+                    newGrid[i*N+j] = ON 
+                else:
+                    newGrid[i*N+j] = grid[i, j]
+    if i==99:
+        #print("AAAAA")
+
+
+def update(frameNum, img, grid, N): 
   
+    # copy grid since we require 8 neighbors  
+    # for calculation and we go line by line  
+ 
+    #newGrid = grid.copy() 
+    
+    #p = Pool() 
+    #p.map(compute, make(N, grid))
+    for i in range(N):
+        p = Process(target=compute, args=(i, N, grid, newGrid))
+        p.start()
+    p.join()
+    for a in range(N):
+        for b in range(N):
+            newNewGrid[a, b] = newGrid[a*N+b]
+    #print((grid==newNewGrid))
     # update data 
-    img.set_data(newGrid) 
-    grid[:] = newGrid[:] 
-    return img, 
+    grid[:] = newNewGrid[:]
+    img.set_data(grid) 
+    
+    return img
   
 # main() function 
 def main(): 
-  
-    # Command line args are in sys.argv[1], sys.argv[2] .. 
+    print("MAIN")
+# call main 
+if __name__ == '__main__': 
+    #main() 
+     # Command line args are in sys.argv[1], sys.argv[2] .. 
     # sys.argv[0] is the script name itself and can be ignored 
     # parse arguments 
     parser = argparse.ArgumentParser(description="Runs Conway's Game of Life simulation.") 
@@ -109,8 +135,8 @@ def main():
         updateInterval = int(args.interval) 
   
     # declare grid 
-    grid = np.array([]) 
-  
+    grid = Array('i', N*N, lock=False)#np.array([]) 
+    newGrid = Array('i', N*N, lock=False)
     # check if "glider" demo flag is specified 
     if args.glider: 
         grid = np.zeros(N*N).reshape(N, N) 
@@ -122,7 +148,7 @@ def main():
     else:   # populate grid with random on/off - 
             # more off than on 
         grid = randomGrid(N) 
-  
+    newNewGrid = randomGrid(N)
     # set up animation 
     fig, ax = plt.subplots() 
     img = ax.imshow(grid, interpolation='nearest') 
@@ -137,8 +163,4 @@ def main():
         ani.save(args.movfile, fps=30, extra_args=['-vcodec', 'libx264']) 
   
     plt.show() 
-  
-# call main 
-if __name__ == '__main__': 
-    main() 
 

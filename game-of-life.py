@@ -55,10 +55,10 @@ def addGosperGliderGun(i, j, grid):
   
     grid[i:i+11, j:j+38] = gun 
   
-def compute(i, N, grid, newGrid):
+def compute(I, N, grid, newGrid):
     #i, N, grid= tupl
-    #for i in range(I)
-    for j in range(N): 
+    for i in range(I):
+        for j in range(N): 
             # compute 8-neghbor sum 
             # using toroidal boundary conditions - x and y wrap around  
             # so that the simulaton takes place on a toroidal surface. 
@@ -78,22 +78,23 @@ def compute(i, N, grid, newGrid):
                     newGrid[i*N+j] = ON 
                 else:
                     newGrid[i*N+j] = grid[i, j]
-    if i==99:
-        #print("AAAAA")
-
+  
 
 def update(frameNum, img, grid, N): 
   
-    # copy grid since we require 8 neighbors  
-    # for calculation and we go line by line  
- 
-    #newGrid = grid.copy() 
-    
-    #p = Pool() 
-    #p.map(compute, make(N, grid))
-    for i in range(N):
-        p = Process(target=compute, args=(i, N, grid, newGrid))
+    nProcesses =3
+    nRows = N//nProcesses
+    nRemainder = N%nProcesses
+    offset = nRows
+    extra = 0
+    for i in range(nProcesses):
+        if nRemainder!=0:
+            nRemainder=nRemainder-1
+            extra = 1
+        p = Process(target=compute, args=(offset+extra, N, grid, newGrid))
         p.start()
+        offset = offset + nRows + extra
+        extra = 0
     p.join()
     for a in range(N):
         for b in range(N):

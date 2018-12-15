@@ -12,12 +12,12 @@ ON = 255
 OFF = 0
 vals = [ON, OFF]
 
-def randomGrid(N): 
+def random_grid(N): 
   
     """returns a grid of NxN random values"""
     return np.random.choice(vals, N*N, p=[0.2, 0.8]).reshape(N, N)
   
-def addGlider(i, j, grid): 
+def add_glider(i, j, grid): 
   
     """adds a glider with top left cell at (i, j)"""
     glider = np.array([[0,    0, 255],  
@@ -25,7 +25,7 @@ def addGlider(i, j, grid):
                        [0,  255, 255]]) 
     grid[i:i+3, j:j+3] = glider 
   
-def addGosperGliderGun(i, j, grid): 
+def add_gosper_glider_gun(i, j, grid): 
   
     """adds a Gosper Glider Gun with top left 
        cell at (i, j)"""
@@ -87,21 +87,21 @@ def update(frameNum, img, grid, N):
     nRemainder = N%nProcesses
     offset = nRows
     extra = 0
+    p = []
     for i in range(nProcesses):
         if nRemainder!=0:
             nRemainder=nRemainder-1
             extra = 1
-        p = Process(target=compute, args=(offset+extra, N, grid, newGrid))
-        p.start()
+        pr = Process(target=compute, args=(offset+extra, N, grid, newGrid))
+        p.append(pr)
+        p[i].start()
         offset = offset + nRows + extra
         extra = 0
-    p.join()
+    for i in range(nProcesses):
+        p[i].join()
     for a in range(N):
         for b in range(N):
-            newNewGrid[a, b] = newGrid[a*N+b]
-    #print((grid==newNewGrid))
-    # update data 
-    grid[:] = newNewGrid[:]
+            grid[a, b] = newGrid[a*N+b]
     img.set_data(grid) 
     
     return img
@@ -141,15 +141,14 @@ if __name__ == '__main__':
     # check if "glider" demo flag is specified 
     if args.glider: 
         grid = np.zeros(N*N).reshape(N, N) 
-        addGlider(1, 1, grid) 
+        add_glider(1, 1, grid) 
     elif args.gosper: 
         grid = np.zeros(N*N).reshape(N, N) 
-        addGosperGliderGun(10, 10, grid) 
+        add_gosper_glider_gun(10, 10, grid) 
   
     else:   # populate grid with random on/off - 
             # more off than on 
-        grid = randomGrid(N) 
-    newNewGrid = randomGrid(N)
+        grid = random_grid(N) 
     # set up animation 
     fig, ax = plt.subplots() 
     img = ax.imshow(grid, interpolation='nearest') 
